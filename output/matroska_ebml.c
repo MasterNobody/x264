@@ -317,7 +317,9 @@ mk_writer *mk_create_writer( const char *filename )
     return w;
 }
 
-static const uint8_t mk_stereo_modes[6] = {5,9,7,1,3,13};
+static const uint8_t mk_stereo_modes[] = {5,9,7,1,3,13,0};
+static const uint8_t mk_dwidth_modes[] = {1,2,1,2,1,1,1};
+static const uint8_t mk_dheight_modes[] = {1,1,2,1,2,1,1};
 
 int mk_write_header( mk_writer *w, const char *writing_app,
                      const char *codec_id,
@@ -379,9 +381,14 @@ int mk_write_header( mk_writer *w, const char *writing_app,
     CHECK( mk_write_uint( v, 0xb0, width ) );
     CHECK( mk_write_uint( v, 0xba, height ) );
     CHECK( mk_write_uint( v, 0x54b2, display_size_units ) );
+    if( stereo_mode >= 0 && stereo_mode <= 6 )
+    {
+        d_width /= mk_dwidth_modes[stereo_mode];
+        d_height /= mk_dheight_modes[stereo_mode];
+    }
     CHECK( mk_write_uint( v, 0x54b0, d_width ) );
     CHECK( mk_write_uint( v, 0x54ba, d_height ) );
-    if( stereo_mode >= 0 && stereo_mode <= 5 )
+    if( stereo_mode >= 0 && stereo_mode <= 6 )
         CHECK( mk_write_uint( v, 0x53b8, mk_stereo_modes[stereo_mode] ) );
     CHECK( mk_close_context( v, 0 ) );
 
