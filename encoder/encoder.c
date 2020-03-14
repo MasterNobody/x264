@@ -2004,7 +2004,8 @@ static int encoder_encapsulate_nals( x264_t *h, int start )
 
     for( int i = start; i < h->out.i_nal; i++ )
     {
-        h->out.nal[i].b_long_startcode = !i || h->out.nal[i].i_type == NAL_SPS || h->out.nal[i].i_type == NAL_PPS ||
+        h->out.nal[i].b_long_startcode = !i || h->param.b_long_startcode ||
+                                         h->out.nal[i].i_type == NAL_SPS || h->out.nal[i].i_type == NAL_PPS ||
                                          h->param.i_avcintra_class;
         x264_nal_encode( h, nal_buffer, &h->out.nal[i] );
         nal_buffer += h->out.nal[i].i_payload;

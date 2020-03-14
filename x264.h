@@ -491,8 +491,9 @@ typedef struct x264_param_t
     /* Muxing parameters */
     int b_aud;                  /* generate access unit delimiters */
     int b_repeat_headers;       /* put SPS/PPS before each keyframe */
-    int b_annexb;               /* if set, place start codes (4 bytes) before NAL units,
+    int b_annexb;               /* if set, place start codes (3 or 4 bytes) before NAL units,
                                  * otherwise place size (4 bytes) before NAL units. */
+    int b_long_startcode;       /* always use 4-byte start codes before NAL units (needed for WebRTC) */
     int i_sps_id;               /* SPS and PPS id number */
     int b_vfr_input;            /* VFR input.  If 1, use timebase and timestamps for ratecontrol purposes.
                                  * If 0, use fps only. */
