@@ -122,41 +122,43 @@ function idct4x4dc_neon, export=1
 endfunc
 
 function sub4x4_dct_neon, export=1
-    mov         x3, #FENC_STRIDE
-    mov         x4, #FDEC_STRIDE
-    ld1         {v0.s}[0], [x1], x3
-    ld1         {v1.s}[0], [x2], x4
-    ld1         {v2.s}[0], [x1], x3
-    usubl       v16.8h, v0.8b,  v1.8b
-    ld1         {v3.s}[0], [x2], x4
-    ld1         {v4.s}[0], [x1], x3
-    usubl       v17.8h, v2.8b,  v3.8b
-    ld1         {v5.s}[0], [x2], x4
-    ld1         {v6.s}[0], [x1], x3
-    usubl       v18.8h, v4.8b,  v5.8b
-    ld1         {v7.s}[0], [x2], x4
-    usubl       v19.8h, v6.8b,  v7.8b
+    ldr         s0, [x1]
+    ldr         s1, [x2]
+    ldr         s2, [x1, #FENC_STRIDE]
+    ldr         s3, [x2, #FDEC_STRIDE]
+    usubl       v16.8h,  v0.8b,  v1.8b
+    usubl       v17.8h,  v2.8b,  v3.8b
+
+    ldr         s4, [x1, #FENC_STRIDE*2]
+    ldr         s5, [x2, #FDEC_STRIDE*2]
+    ldr         s6, [x1, #FENC_STRIDE*3]
+    ldr         s7, [x2, #FDEC_STRIDE*3]
+    usubl       v18.8h,  v4.8b,  v5.8b
+    usubl       v19.8h,  v6.8b,  v7.8b
 
     DCT_1D      v0.4h, v1.4h, v2.4h, v3.4h, v16.4h, v17.4h, v18.4h, v19.4h
     transpose4x4.h v0, v1, v2, v3, v4, v5, v6, v7
     DCT_1D      v4.4h, v5.4h, v6.4h, v7.4h, v0.4h, v1.4h, v2.4h, v3.4h
-    st1         {v4.4h,v5.4h,v6.4h,v7.4h}, [x0]
+
+    stp         d4, d5, [x0]
+    stp         d6, d7, [x0, #16]
     ret
 endfunc
 
-function sub8x4_dct_neon
-    ld1         {v0.8b}, [x1], x3
-    ld1         {v1.8b}, [x2], x4
-    usubl       v16.8h, v0.8b,  v1.8b
-    ld1         {v2.8b}, [x1], x3
-    ld1         {v3.8b}, [x2], x4
-    usubl       v17.8h, v2.8b,  v3.8b
-    ld1         {v4.8b}, [x1], x3
-    ld1         {v5.8b}, [x2], x4
-    usubl       v18.8h, v4.8b,  v5.8b
-    ld1         {v6.8b}, [x1], x3
-    ld1         {v7.8b}, [x2], x4
-    usubl       v19.8h, v6.8b,  v7.8b
+.macro SUB8x4_DCT_NEON  dst_off, src_y, src_off
+    ldr         d0, [x1, #\src_off + FENC_STRIDE*(\src_y + 0)]
+    ldr         d1, [x2, #\src_off + FDEC_STRIDE*(\src_y + 0)]
+    ldr         d2, [x1, #\src_off + FENC_STRIDE*(\src_y + 1)]
+    ldr         d3, [x2, #\src_off + FDEC_STRIDE*(\src_y + 1)]
+    usubl       v16.8h, v0.8b, v1.8b
+    usubl       v17.8h, v2.8b, v3.8b
+
+    ldr         d4, [x1, #\src_off + FENC_STRIDE*(\src_y + 2)]
+    ldr         d5, [x2, #\src_off + FDEC_STRIDE*(\src_y + 2)]
+    ldr         d6, [x1, #\src_off + FENC_STRIDE*(\src_y + 3)]
+    ldr         d7, [x2, #\src_off + FDEC_STRIDE*(\src_y + 3)]
+    usubl       v18.8h, v4.8b, v5.8b
+    usubl       v19.8h, v6.8b, v7.8b
 
     DCT_1D      v0.8h, v1.8h, v2.8h, v3.8h, v16.8h, v17.8h, v18.8h, v19.8h
     transpose4x8.h v0, v1, v2, v3, v4, v5, v6, v7
@@ -168,7 +170,7 @@ function sub8x4_dct_neon
     add         v0.8h,  v16.8h, v17.8h
     sub         v1.8h,  v16.8h, v17.8h
 
-    add         v2.8h,  v22.8h, v18.8h
+    add         v2.8h,  v18.8h, v22.8h
     sub         v3.8h,  v19.8h, v21.8h
 
     zip1        v4.2d,  v0.2d,  v2.2d
@@ -176,41 +178,91 @@ function sub8x4_dct_neon
     zip1        v5.2d,  v1.2d,  v3.2d
     zip2        v7.2d,  v1.2d,  v3.2d
 
-    st1         {v4.8h}, [x0], #16
-    st1         {v5.8h}, [x0], #16
-    st1         {v6.8h}, [x0], #16
-    st1         {v7.8h}, [x0], #16
+    stp         q4, q5, [x0, #\dst_off]
+    stp         q6, q7, [x0, #\dst_off + 32]
+.endm
+
+function sub8x8_dct_neon, export=1
+    SUB8x4_DCT_NEON  0,   0,  0
+    SUB8x4_DCT_NEON  64,  4,  0
     ret
 endfunc
 
-function sub8x8_dct_neon, export=1
-    mov         x5,  x30
-    mov         x3, #FENC_STRIDE
-    mov         x4, #FDEC_STRIDE
-    bl          sub8x4_dct_neon
-    mov         x30, x5
-    b           sub8x4_dct_neon
-endfunc
+.macro SUB16x4_DCT_NEON  dst_off, src_y, src_off
+    ldr         q0, [x1, #\src_off + FENC_STRIDE*(\src_y + 0)]
+    ldr         q1, [x2, #\src_off + FDEC_STRIDE*(\src_y + 0)]
+    ldr         q2, [x1, #\src_off + FENC_STRIDE*(\src_y + 1)]
+    ldr         q3, [x2, #\src_off + FDEC_STRIDE*(\src_y + 1)]
+    usubl       v16.8h, v0.8b,  v1.8b
+    usubl2      v24.8h, v0.16b, v1.16b
+    usubl       v17.8h, v2.8b,  v3.8b
+    usubl2      v25.8h, v2.16b, v3.16b
+
+    ldr         q4, [x1, #\src_off + FENC_STRIDE*(\src_y + 2)]
+    ldr         q5, [x2, #\src_off + FDEC_STRIDE*(\src_y + 2)]
+    ldr         q6, [x1, #\src_off + FENC_STRIDE*(\src_y + 3)]
+    ldr         q7, [x2, #\src_off + FDEC_STRIDE*(\src_y + 3)]
+    usubl       v18.8h, v4.8b,  v5.8b
+    usubl2      v26.8h, v4.16b, v5.16b
+    usubl       v19.8h, v6.8b,  v7.8b
+    usubl2      v27.8h, v6.16b, v7.16b
+
+    DCT_1D         v0.8h, v1.8h, v2.8h, v3.8h, v16.8h, v17.8h, v18.8h, v19.8h
+    transpose4x8.h v0, v1, v2, v3, v4, v5, v6, v7
+
+    SUMSUB_AB   v16.8h, v19.8h, v0.8h,  v3.8h
+    SUMSUB_AB   v17.8h, v18.8h, v1.8h,  v2.8h
+    add         v31.8h, v19.8h, v19.8h
+    add         v30.8h, v18.8h, v18.8h
+    add         v0.8h,  v16.8h, v17.8h
+    sub         v1.8h,  v16.8h, v17.8h
+
+    add         v2.8h,  v18.8h, v31.8h
+    sub         v3.8h,  v19.8h, v30.8h
+
+    zip1        v4.2d,  v0.2d,  v2.2d
+    zip2        v6.2d,  v0.2d,  v2.2d
+    zip1        v5.2d,  v1.2d,  v3.2d
+    zip2        v7.2d,  v1.2d,  v3.2d
+
+    stp         q4, q5, [x0, #\dst_off]
+    stp         q6, q7, [x0, #\dst_off + 32]
+    
+    DCT_1D         v20.8h, v21.8h, v22.8h, v23.8h, v24.8h, v25.8h, v26.8h, v27.8h
+    transpose4x8.h v20, v21, v22, v23, v24, v25, v26, v27
+
+    SUMSUB_AB   v24.8h, v27.8h, v20.8h, v23.8h
+    SUMSUB_AB   v25.8h, v26.8h, v21.8h, v22.8h
+    add         v31.8h, v27.8h, v27.8h
+    add         v30.8h, v26.8h, v26.8h
+    add         v20.8h, v24.8h, v25.8h
+    sub         v21.8h, v24.8h, v25.8h
+
+    add         v22.8h, v26.8h, v31.8h
+    sub         v23.8h, v27.8h, v30.8h
+
+    zip1        v24.2d,  v20.2d,  v22.2d
+    zip2        v26.2d,  v20.2d,  v22.2d
+    zip1        v25.2d,  v21.2d,  v23.2d
+    zip2        v27.2d,  v21.2d,  v23.2d
+
+    stp         q24, q25, [x0, #\dst_off + 128]
+    stp         q26, q27, [x0, #\dst_off + 128 + 32]
+.endm
 
 function sub16x16_dct_neon, export=1
-    mov         x5,  x30
-    mov         x3, #FENC_STRIDE
-    mov         x4, #FDEC_STRIDE
-    bl          sub8x4_dct_neon
-    bl          sub8x4_dct_neon
-    sub         x1, x1, #8*FENC_STRIDE-8
-    sub         x2, x2, #8*FDEC_STRIDE-8
-    bl          sub8x4_dct_neon
-    bl          sub8x4_dct_neon
-    sub         x1, x1, #8
-    sub         x2, x2, #8
-    bl          sub8x4_dct_neon
-    bl          sub8x4_dct_neon
-    sub         x1, x1, #8*FENC_STRIDE-8
-    sub         x2, x2, #8*FDEC_STRIDE-8
-    bl          sub8x4_dct_neon
-    mov         x30, x5
-    b           sub8x4_dct_neon
+    mov         x15, #2
+1:
+    SUB16x4_DCT_NEON  0,   0,  0
+    SUB16x4_DCT_NEON  64,  4,  0
+    add         x1, x1, #FENC_STRIDE*8
+    add         x2, x2, #FDEC_STRIDE*8
+    add         x0, x0, #256
+
+    subs        x15, x15, #1
+    b.ne        1b
+
+    ret
 endfunc
 
 
@@ -245,56 +297,58 @@ endfunc
     SUMSUB_SHR2 2, v3.8h,  v5.8h,  v30.8h, v29.8h, v20.8h, v21.8h
 .endm
 
-function sub8x8_dct8_neon, export=1
-    mov         x3, #FENC_STRIDE
-    mov         x4, #FDEC_STRIDE
-    ld1         {v16.8b}, [x1], x3
-    ld1         {v17.8b}, [x2], x4
-    ld1         {v18.8b}, [x1], x3
-    ld1         {v19.8b}, [x2], x4
-    usubl       v0.8h,  v16.8b, v17.8b
-    ld1         {v20.8b}, [x1], x3
-    ld1         {v21.8b}, [x2], x4
-    usubl       v1.8h,  v18.8b, v19.8b
-    ld1         {v22.8b}, [x1], x3
-    ld1         {v23.8b}, [x2], x4
-    usubl       v2.8h,  v20.8b, v21.8b
-    ld1         {v24.8b}, [x1], x3
-    ld1         {v25.8b}, [x2], x4
-    usubl       v3.8h,  v22.8b, v23.8b
-    ld1         {v26.8b}, [x1], x3
-    ld1         {v27.8b}, [x2], x4
-    usubl       v4.8h,  v24.8b, v25.8b
-    ld1         {v28.8b}, [x1], x3
-    ld1         {v29.8b}, [x2], x4
-    usubl       v5.8h,  v26.8b, v27.8b
-    ld1         {v30.8b}, [x1], x3
-    ld1         {v31.8b}, [x2], x4
-    usubl       v6.8h,  v28.8b, v29.8b
-    usubl       v7.8h,  v30.8b, v31.8b
+.macro SUB8x8_DCT8_NEON   dst_off,  enc_off,  dec_off
+    ldr         q16, [x1, #\enc_off]
+    ldr         q17, [x2, #\dec_off]
+    ldr         q18, [x1, #\enc_off + FENC_STRIDE]
+    ldr         q19, [x2, #\dec_off + FDEC_STRIDE]
+    usubl       v0.8h, v16.8b, v17.8b
+    usubl       v1.8h, v18.8b, v19.8b
+
+    ldr         q20, [x1, #\enc_off + FENC_STRIDE*2]
+    ldr         q21, [x2, #\dec_off + FDEC_STRIDE*2]
+    ldr         q22, [x1, #\enc_off + FENC_STRIDE*3]
+    ldr         q23, [x2, #\dec_off + FDEC_STRIDE*3]
+    usubl       v2.8h, v20.8b, v21.8b
+    usubl       v3.8h, v22.8b, v23.8b
+
+    ldr         q24, [x1, #\enc_off + FENC_STRIDE*4]
+    ldr         q25, [x2, #\dec_off + FDEC_STRIDE*4]
+    ldr         q26, [x1, #\enc_off + FENC_STRIDE*5]
+    ldr         q27, [x2, #\dec_off + FDEC_STRIDE*5]
+    usubl       v4.8h, v24.8b, v25.8b
+    usubl       v5.8h, v26.8b, v27.8b
+
+    ldr         q28, [x1, #\enc_off + FENC_STRIDE*6]
+    ldr         q29, [x2, #\dec_off + FDEC_STRIDE*6]
+    ldr         q30, [x1, #\enc_off + FENC_STRIDE*7]
+    ldr         q31, [x2, #\dec_off + FDEC_STRIDE*7]
+    usubl       v6.8h, v28.8b, v29.8b
+    usubl       v7.8h, v30.8b, v31.8b
 
     DCT8_1D     row
     transpose8x8.h v0, v1, v2, v3, v4, v5, v6, v7, v30, v31
     DCT8_1D     col
 
-    st1         {v0.8h,v1.8h,v2.8h,v3.8h}, [x0], #64
-    st1         {v4.8h,v5.8h,v6.8h,v7.8h}, [x0], #64
+    stp         q0, q1, [x0, #\dst_off]
+    stp         q2, q3, [x0, #\dst_off + 32]
+    stp         q4, q5, [x0, #\dst_off + 64]
+    stp         q6, q7, [x0, #\dst_off + 96]
+.endm
+
+function sub8x8_dct8_neon, export=1
+    SUB8x8_DCT8_NEON  0,  0,  0
     ret
 endfunc
 
 function sub16x16_dct8_neon, export=1
-    mov         x7,  x30
-    bl          X(sub8x8_dct8_neon)
-    sub         x1,  x1,  #FENC_STRIDE*8 - 8
-    sub         x2,  x2,  #FDEC_STRIDE*8 - 8
-    bl          X(sub8x8_dct8_neon)
-    sub         x1,  x1,  #8
-    sub         x2,  x2,  #8
-    bl          X(sub8x8_dct8_neon)
-    mov         x30, x7
-    sub         x1,  x1,  #FENC_STRIDE*8 - 8
-    sub         x2,  x2,  #FDEC_STRIDE*8 - 8
-    b           X(sub8x8_dct8_neon)
+    SUB8x8_DCT8_NEON  0,    0,  0
+    SUB8x8_DCT8_NEON  128,  8,  8
+    add         x1, x1, #FENC_STRIDE*8
+    add         x2, x2, #FDEC_STRIDE*8
+    SUB8x8_DCT8_NEON  256,  0,  0
+    SUB8x8_DCT8_NEON  384,  8,  8
+    ret
 endfunc
 
 
@@ -613,29 +667,31 @@ function add16x16_idct_dc_neon, export=1
 endfunc
 
 .macro sub4x4x2_dct_dc, dst, t0, t1, t2, t3, t4, t5, t6, t7
-    ld1         {\t0\().8b}, [x1], x3
-    ld1         {\t1\().8b}, [x2], x4
-    ld1         {\t2\().8b}, [x1], x3
-    ld1         {\t3\().8b}, [x2], x4
-    usubl       \t0\().8h,  \t0\().8b,  \t1\().8b
-    ld1         {\t4\().8b}, [x1], x3
-    ld1         {\t5\().8b}, [x2], x4
-    usubl       \t1\().8h,  \t2\().8b,  \t3\().8b
-    ld1         {\t6\().8b}, [x1], x3
-    ld1         {\t7\().8b}, [x2], x4
-    add         \dst\().8h, \t0\().8h,  \t1\().8h
-    usubl       \t2\().8h,  \t4\().8b,  \t5\().8b
-    usubl       \t3\().8h,  \t6\().8b,  \t7\().8b
-    add         \dst\().8h, \dst\().8h, \t2\().8h
-    add         \dst\().8h, \dst\().8h, \t3\().8h
+    ldr         q\t0\(), [x1]
+    ldr         q\t1\(), [x2]
+    ldr         q\t2\(), [x1, #FENC_STRIDE]
+    ldr         q\t3\(), [x2, #FDEC_STRIDE]
+    usubl       v\t0\().8h,  v\t0\().8b,  v\t1\().8b
+    usubl       v\t2\().8h,  v\t2\().8b,  v\t3\().8b
+    add         v\t0\().8h,  v\t0\().8h,  v\t2\().8h
+
+    ldr         q\t4\(), [x1, #FENC_STRIDE*2]
+    ldr         q\t5\(), [x2, #FDEC_STRIDE*2]
+    ldr         q\t6\(), [x1, #FENC_STRIDE*3]
+    ldr         q\t7\(), [x2, #FDEC_STRIDE*3]
+    usubl       v\t4\().8h,  v\t4\().8b,  v\t5\().8b
+    usubl       v\t6\().8h,  v\t6\().8b,  v\t7\().8b
+    add         v\t4\().8h,  v\t4\().8h,  v\t6\().8h
+
+    add         x1, x1, #FENC_STRIDE*4
+    add         x2, x2, #FDEC_STRIDE*4
+
+    add         v\dst\().8h, v\t0\().8h, v\t4\().8h
 .endm
 
 function sub8x8_dct_dc_neon, export=1
-    mov         x3,  #FENC_STRIDE
-    mov         x4,  #FDEC_STRIDE
-
-    sub4x4x2_dct_dc v0, v16, v17, v18, v19, v20, v21, v22, v23
-    sub4x4x2_dct_dc v1, v24, v25, v26, v27, v28, v29, v30, v31
+    sub4x4x2_dct_dc 0, 16, 17, 18, 19, 20, 21, 22, 23
+    sub4x4x2_dct_dc 1, 24, 25, 26, 27, 28, 29, 30, 31
 
     transpose   v2.2d,  v3.2d,  v0.2d,  v1.2d
     SUMSUB_AB   v0.8h,  v1.8h,  v2.8h,  v3.8h
@@ -646,17 +702,15 @@ function sub8x8_dct_dc_neon, export=1
     addp        v0.8h,  v2.8h,  v3.8h
     addp        v0.8h,  v0.8h,  v0.8h
 
-    st1         {v0.4h}, [x0]
+    str         d0, [x0]
     ret
 endfunc
 
 function sub8x16_dct_dc_neon, export=1
-    mov         x3,  #FENC_STRIDE
-    mov         x4,  #FDEC_STRIDE
-    sub4x4x2_dct_dc v0, v16, v17, v18, v19, v20, v21, v22, v23
-    sub4x4x2_dct_dc v1, v24, v25, v26, v27, v28, v29, v30, v31
-    sub4x4x2_dct_dc v2, v16, v17, v18, v19, v20, v21, v22, v23
-    sub4x4x2_dct_dc v3, v24, v25, v26, v27, v28, v29, v30, v31
+    sub4x4x2_dct_dc 0, 16, 17, 18, 19, 20, 21, 22, 23
+    sub4x4x2_dct_dc 1, 24, 25, 26, 27, 28, 29, 30, 31
+    sub4x4x2_dct_dc 2, 16, 17, 18, 19, 20, 21, 22, 23
+    sub4x4x2_dct_dc 3, 24, 25, 26, 27, 28, 29, 30, 31
 
     addp        v4.8h,  v0.8h,  v2.8h
     addp        v5.8h,  v1.8h,  v3.8h
@@ -675,7 +729,7 @@ function sub8x16_dct_dc_neon, export=1
 
     addp        v0.8h,  v2.8h,  v3.8h
 
-    st1         {v0.8h}, [x0]
+    str         q0, [x0]
     ret
 endfunc
 

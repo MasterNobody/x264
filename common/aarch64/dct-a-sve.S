@@ -28,36 +28,6 @@
 
 ENABLE_SVE
 
-function sub4x4_dct_sve, export=1
-    mov         x3, #FENC_STRIDE
-    mov         x4, #FDEC_STRIDE
-    ptrue       p0.h, vl4
-    ld1b        {z0.h}, p0/z, [x1]
-    add         x1, x1, x3
-    ld1b        {z1.h}, p0/z, [x2]
-    add         x2, x2, x4
-    ld1b        {z2.h}, p0/z, [x1]
-    add         x1, x1, x3
-    sub         v16.4h, v0.4h, v1.4h
-    ld1b        {z3.h}, p0/z, [x2]
-    add         x2, x2, x4
-    ld1b        {z4.h}, p0/z, [x1]
-    add         x1, x1, x3
-    sub         v17.4h, v2.4h, v3.4h
-    ld1b        {z5.h}, p0/z, [x2]
-    add         x2, x2, x4
-    ld1b        {z6.h}, p0/z, [x1]
-    sub         v18.4h, v4.4h, v5.4h
-    ld1b        {z7.h}, p0/z, [x2]
-    sub         v19.4h, v6.4h, v7.4h
-
-    DCT_1D      v0.4h, v1.4h, v2.4h, v3.4h, v16.4h, v17.4h, v18.4h, v19.4h
-    transpose4x4.h v0, v1, v2, v3, v4, v5, v6, v7
-    DCT_1D      v4.4h, v5.4h, v6.4h, v7.4h, v0.4h, v1.4h, v2.4h, v3.4h
-    st1         {v4.4h,v5.4h,v6.4h,v7.4h}, [x0]
-    ret
-endfunc
-
 function zigzag_interleave_8x8_cavlc_sve, export=1
     mov         z31.s, #1
     ptrue       p2.s, vl2

@@ -707,12 +707,6 @@ void x264_dct_init( uint32_t cpu, x264_dct_function_t *dctf )
         dctf->add16x16_idct8= x264_add16x16_idct8_neon;
         dctf->sub8x16_dct_dc= x264_sub8x16_dct_dc_neon;
     }
-#if HAVE_SVE
-    if ( cpu&X264_CPU_SVE )
-    {
-        dctf->sub4x4_dct    = x264_sub4x4_dct_sve;
-    }
-#endif
 #if HAVE_SVE2
     if ( cpu&X264_CPU_SVE2 )
     {
