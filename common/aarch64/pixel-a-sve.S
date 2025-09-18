@@ -591,7 +591,7 @@ function pixel_ads2_\sve_version, export=1
 
     index       z4.s, #0, #1  // indices for compactification
     dup         z6.s, w6      // threshold
-    
+
     mov         x9, #0  // i
     sxtw        x2, w2
     add         x2, x1, x2, lsl #1  // sums + delta
@@ -662,7 +662,7 @@ function pixel_ads4_\sve_version, export=1
 
     add         x11, x1, #16  // sums + 8
     add         x12, x2, #16  // sums + delta + 8
-    
+
 1:  // for( int i=0; i<width; i++ )
     whilelt     p0.s, w9, w5
     b.ge        2f
@@ -692,7 +692,7 @@ function pixel_ads4_\sve_version, export=1
 
     add         z16.s, z16.s, z17.s
     add         z18.s, z18.s, z19.s
-    
+
     add         z20.s, z20.s, z16.s
     add         z20.s, z20.s, z18.s
 .endif

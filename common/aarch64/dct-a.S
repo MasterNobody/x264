@@ -227,7 +227,7 @@ endfunc
 
     stp         q4, q5, [x0, #\dst_off]
     stp         q6, q7, [x0, #\dst_off + 32]
-    
+
     DCT_1D         v20.8h, v21.8h, v22.8h, v23.8h, v24.8h, v25.8h, v26.8h, v27.8h
     transpose4x8.h v20, v21, v22, v23, v24, v25, v26, v27
 
