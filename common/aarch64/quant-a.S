@@ -334,12 +334,10 @@ endfunc
     umull2      v21.4s, v18.8h, \mf0_1\().8h
     umull       v22.4s, v19.4h, \mf2_3\().4h
     umull2      v23.4s, v19.8h, \mf2_3\().8h
-    sshr        v16.8h, v16.8h, #15
-    sshr        v17.8h, v17.8h, #15
-    shrn        v18.4h, v20.4s, #16
-    shrn2       v18.8h, v21.4s, #16
-    shrn        v19.4h, v22.4s, #16
-    shrn2       v19.8h, v23.4s, #16
+    cmlt        v16.8h, v16.8h, #0
+    cmlt        v17.8h, v17.8h, #0
+    uzp2        v18.8h, v20.8h, v21.8h
+    uzp2        v19.8h, v22.8h, v23.8h
     eor         v18.16b, v18.16b, v16.16b
     eor         v19.16b, v19.16b, v17.16b
     sub         v18.8h, v18.8h, v16.8h
@@ -350,9 +348,8 @@ endfunc
 
 .macro QUANT_END d
     fmov        x2,  \d
-    mov         w0,  #0
     tst         x2,  x2
-    cinc        w0,  w0,  ne
+    cset        w0,  ne
     ret
 .endm
 
@@ -364,8 +361,8 @@ function quant_2x2_dc_neon, export=1
     abs         v3.4h,  v0.4h
     add         v3.4h,  v3.4h,  v2.4h
     umull       v3.4s,  v3.4h,  v1.4h
-    sshr        v0.4h,  v0.4h,  #15
-    shrn        v3.4h,  v3.4s,  #16
+    cmlt        v0.4h,  v0.4h,  #0
+    uzp2        v3.8h,  v3.8h,  v3.8h
     eor         v3.8b,  v3.8b,  v0.8b
     sub         v3.4h,  v3.4h,  v0.4h
     st1         {v3.4h}, [x0]
