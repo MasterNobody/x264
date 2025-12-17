@@ -153,15 +153,17 @@ uint64_t x264_pixel_ssd_wxh( x264_pixel_function_t *pf, pixel *pix1, intptr_t i_
 static void pixel_ssd_nv12_core( pixel *pixuv1, intptr_t stride1, pixel *pixuv2, intptr_t stride2,
                                  int width, int height, uint64_t *ssd_u, uint64_t *ssd_v )
 {
-    *ssd_u = 0, *ssd_v = 0;
+    uint64_t tmp_u = 0, tmp_v = 0;
     for( int y = 0; y < height; y++, pixuv1+=stride1, pixuv2+=stride2 )
         for( int x = 0; x < width; x++ )
         {
             int du = pixuv1[2*x]   - pixuv2[2*x];
             int dv = pixuv1[2*x+1] - pixuv2[2*x+1];
-            *ssd_u += du*du;
-            *ssd_v += dv*dv;
+            tmp_u += du*du;
+            tmp_v += dv*dv;
         }
+    *ssd_u = tmp_u;
+    *ssd_v = tmp_v;
 }
 
 void x264_pixel_ssd_nv12( x264_pixel_function_t *pf, pixel *pix1, intptr_t i_pix1, pixel *pix2, intptr_t i_pix2,
@@ -1552,6 +1554,8 @@ void x264_pixel_init( uint32_t cpu, x264_pixel_function_t *pixf )
         pixf->var2[PIXEL_8x8]   = x264_pixel_var2_8x8_neon_dotprod;
         pixf->var2[PIXEL_8x16]  = x264_pixel_var2_8x16_neon_dotprod;
         pixf->vsad = x264_pixel_vsad_neon_dotprod;
+
+        pixf->ssd_nv12_core   = x264_pixel_ssd_nv12_core_neon_dotprod;
     }
 #endif // HAVE_DOTPROD
 

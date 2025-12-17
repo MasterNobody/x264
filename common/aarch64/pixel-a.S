@@ -800,75 +800,79 @@ function satd_8x4v_8x8h_neon
     ret
 endfunc
 
-function pixel_ssd_nv12_core_neon, export=1
-    sxtw        x8,  w4
-    add         x8,  x8,  #8
-    and         x8,  x8,  #~15
-    movi        v6.2d,  #0
-    movi        v7.2d,  #0
-    sub         x1,  x1,  x8, lsl #1
-    sub         x3,  x3,  x8, lsl #1
+.macro PIXEL_SSD_NV12_CORE_NEON  dotprod=
+function pixel_ssd_nv12_core_neon\dotprod, export=1
+    sxtw        x4,  w4
+    sub         x1,  x1,  x4, lsl #1
+    sub         x3,  x3,  x4, lsl #1
+    movi        v0.2d,  #0
+    movi        v1.2d,  #0
 1:
-    subs        w8,  w4,  #16
-    ld2         {v0.8b,v1.8b},   [x0],  #16
-    ld2         {v2.8b,v3.8b},   [x2],  #16
-    ld2         {v24.8b,v25.8b}, [x0],  #16
-    ld2         {v26.8b,v27.8b}, [x2],  #16
+    cmp         w4,  #16
+    b.lt        3f
 
-    usubl       v16.8h, v0.8b,  v2.8b
-    usubl       v17.8h, v1.8b,  v3.8b
-    smull       v20.4s, v16.4h, v16.4h
-    smull       v21.4s, v17.4h, v17.4h
-    usubl       v18.8h, v24.8b, v26.8b
-    usubl       v19.8h, v25.8b, v27.8b
-    smlal2      v20.4s, v16.8h, v16.8h
-    smlal2      v21.4s, v17.8h, v17.8h
-
-    b.lt        4f
-    b.eq        3f
+    bic         w8,  w4,  #15
 2:
-    smlal       v20.4s, v18.4h, v18.4h
-    smlal       v21.4s, v19.4h, v19.4h
-    ld2         {v0.8b,v1.8b}, [x0],  #16
-    ld2         {v2.8b,v3.8b}, [x2],  #16
-    smlal2      v20.4s, v18.8h, v18.8h
-    smlal2      v21.4s, v19.8h, v19.8h
-
+    ld2         {v16.16b,v17.16b}, [x0], #32
+    ld2         {v18.16b,v19.16b}, [x2], #32
     subs        w8,  w8,  #16
-    usubl       v16.8h, v0.8b,  v2.8b
-    usubl       v17.8h, v1.8b,  v3.8b
-    smlal       v20.4s, v16.4h, v16.4h
-    smlal       v21.4s, v17.4h, v17.4h
-    ld2         {v24.8b,v25.8b}, [x0],  #16
-    ld2         {v26.8b,v27.8b}, [x2],  #16
-    smlal2      v20.4s, v16.8h, v16.8h
-    smlal2      v21.4s, v17.8h, v17.8h
-    b.lt        4f
-
-    usubl       v18.8h, v24.8b, v26.8b
-    usubl       v19.8h, v25.8b, v27.8b
-    b.gt        2b
+.ifc \dotprod, _dotprod
+    uabd        v16.16b, v16.16b, v18.16b
+    uabd        v17.16b, v17.16b, v19.16b
+    udot        v0.4s, v16.16b, v16.16b
+    udot        v1.4s, v17.16b, v17.16b
+.else
+    usubl       v20.8h, v16.8b,  v18.8b
+    usubl2      v22.8h, v16.16b, v18.16b
+    smlal       v0.4s,  v20.4h,  v20.4h
+    smlal2      v0.4s,  v20.8h,  v20.8h
+    smlal       v0.4s,  v22.4h,  v22.4h
+    smlal2      v0.4s,  v22.8h,  v22.8h
+    usubl       v21.8h, v17.8b,  v19.8b
+    usubl2      v23.8h, v17.16b, v19.16b
+    smlal       v1.4s,  v21.4h,  v21.4h
+    smlal2      v1.4s,  v21.8h,  v21.8h
+    smlal       v1.4s,  v23.4h,  v23.4h
+    smlal2      v1.4s,  v23.8h,  v23.8h
+.endif
+    b.ne        2b
 3:
-    smlal       v20.4s, v18.4h, v18.4h
-    smlal       v21.4s, v19.4h, v19.4h
-    smlal2      v20.4s, v18.8h, v18.8h
-    smlal2      v21.4s, v19.8h, v19.8h
+    tbz         w4,  #3,  4f
+    ld2         {v16.8b,v17.8b}, [x0], #16
+    ld2         {v18.8b,v19.8b}, [x2], #16
+.ifc \dotprod, _dotprod
+    uabd        v16.16b, v16.16b, v18.16b
+    uabd        v17.16b, v17.16b, v19.16b
+    udot        v0.4s, v16.16b, v16.16b
+    udot        v1.4s, v17.16b, v17.16b
+.else
+    usubl       v20.8h, v16.8b,  v18.8b
+    smlal       v0.4s,  v20.4h,  v20.4h
+    smlal2      v0.4s,  v20.8h,  v20.8h
+    usubl       v21.8h, v17.8b,  v19.8b
+    smlal       v1.4s,  v21.4h,  v21.4h
+    smlal2      v1.4s,  v21.8h,  v21.8h
+.endif
 4:
     subs        w5,  w5,  #1
-    uaddw       v6.2d,  v6.2d,  v20.2s
-    uaddw       v7.2d,  v7.2d,  v21.2s
     add         x0,  x0,  x1
     add         x2,  x2,  x3
-    uaddw2      v6.2d,  v6.2d,  v20.4s
-    uaddw2      v7.2d,  v7.2d,  v21.4s
-    b.gt        1b
+    b.ne        1b
 
-    addp        v6.2d,  v6.2d,  v7.2d
-    st1         {v6.d}[0], [x6]
-    st1         {v6.d}[1], [x7]
-
+    uaddlv      d0,  v0.4s
+    uaddlv      d1,  v1.4s
+    str         d0,  [x6]
+    str         d1,  [x7]
     ret
 endfunc
+.endm
+
+PIXEL_SSD_NV12_CORE_NEON
+#if HAVE_DOTPROD
+ENABLE_DOTPROD
+PIXEL_SSD_NV12_CORE_NEON _dotprod
+DISABLE_DOTPROD
+#endif
 
 .macro pixel_var_8 h
 function pixel_var_8x\h\()_neon, export=1
