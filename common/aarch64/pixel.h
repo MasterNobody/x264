@@ -150,15 +150,20 @@ uint64_t x264_pixel_var_8x8_neon  ( pixel *, intptr_t );
 uint64_t x264_pixel_var_8x16_neon ( pixel *, intptr_t );
 #define x264_pixel_var_16x16_neon x264_template(pixel_var_16x16_neon)
 uint64_t x264_pixel_var_16x16_neon( pixel *, intptr_t );
+#define x264_pixel_var_8x8_neon_dotprod x264_template(pixel_var_8x8_neon_dotprod)
+uint64_t x264_pixel_var_8x8_neon_dotprod  ( pixel *, intptr_t );
+#define x264_pixel_var_8x16_neon_dotprod x264_template(pixel_var_8x16_neon_dotprod)
+uint64_t x264_pixel_var_8x16_neon_dotprod ( pixel *, intptr_t );
+#define x264_pixel_var_16x16_neon_dotprod x264_template(pixel_var_16x16_neon_dotprod)
+uint64_t x264_pixel_var_16x16_neon_dotprod( pixel *, intptr_t );
 #define x264_pixel_var2_8x8_neon x264_template(pixel_var2_8x8_neon)
 int x264_pixel_var2_8x8_neon ( pixel *, pixel *, int * );
 #define x264_pixel_var2_8x16_neon x264_template(pixel_var2_8x16_neon)
 int x264_pixel_var2_8x16_neon( pixel *, pixel *, int * );
-#define x264_pixel_var_8x8_sve x264_template(pixel_var_8x8_sve)
-uint64_t x264_pixel_var_8x8_sve  ( pixel *, intptr_t );
-#define x264_pixel_var_8x16_sve x264_template(pixel_var_8x16_sve)
-uint64_t x264_pixel_var_8x16_sve ( pixel *, intptr_t );
-
+#define x264_pixel_var2_8x8_neon_dotprod x264_template(pixel_var2_8x8_neon_dotprod)
+int x264_pixel_var2_8x8_neon_dotprod ( pixel *, pixel *, int * );
+#define x264_pixel_var2_8x16_neon_dotprod x264_template(pixel_var2_8x16_neon_dotprod)
+int x264_pixel_var2_8x16_neon_dotprod( pixel *, pixel *, int * );
 
 #define x264_pixel_hadamard_ac_8x8_neon x264_template(pixel_hadamard_ac_8x8_neon)
 uint64_t x264_pixel_hadamard_ac_8x8_neon  ( pixel *, intptr_t );

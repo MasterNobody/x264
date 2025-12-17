@@ -1027,6 +1027,110 @@ function pixel_var2_8x\h\()_neon, export=1
 endfunc
 .endm
 
+#if HAVE_DOTPROD
+ENABLE_DOTPROD
+.macro PIXEL_VAR_WxH_NEON_DOTPROD w, h
+function pixel_var_\w\()x\h\()_neon_dotprod, export=1
+    add         x2, x1, x1
+    add         x3, x1, x1, lsl #1
+    lsl         x4, x1, #2
+
+    movi        v0.2d, #0
+    movi        v1.2d, #0
+    movi        v2.2d, #0
+    movi        v3.2d, #0
+    movi        v4.16b, #1
+
+    mov         w5, #\h
+1:
+    subs        w5, w5, #4
+.if \w == 8
+    ldr         d16, [x0]
+    ldr         d17, [x0, x1]
+    ldr         d18, [x0, x2]
+    ldr         d19, [x0, x3]
+    mov         v16.d[1], v18.d[0]
+    mov         v17.d[1], v19.d[0]
+.else
+    ldr         q16, [x0]
+    ldr         q17, [x0, x1]
+    ldr         q18, [x0, x2]
+    ldr         q19, [x0, x3]
+.endif
+    add         x0, x0, x4
+
+    udot        v0.4s,  v4.16b, v16.16b
+    udot        v1.4s, v16.16b, v16.16b
+    udot        v2.4s,  v4.16b, v17.16b
+    udot        v3.4s, v17.16b, v17.16b
+.if \w == 16
+    udot        v0.4s,  v4.16b, v18.16b
+    udot        v1.4s, v18.16b, v18.16b
+    udot        v2.4s,  v4.16b, v19.16b
+    udot        v3.4s, v19.16b, v19.16b
+.endif
+    b.ne        1b
+
+    add         v0.4s, v0.4s, v2.4s
+    add         v1.4s, v1.4s, v3.4s
+    addp        v0.4s, v0.4s, v1.4s
+
+    addp        v0.4s, v0.4s, v0.4s
+    fmov        x0, d0
+    ret
+endfunc
+.endm
+
+.macro PIXEL_VAR2_8xH_NEON_DOTPROD w, h, shift
+function pixel_var2_8x\h\()_neon_dotprod, export=1
+    movi        v0.2d, #0
+    movi        v1.2d, #0
+    movi        v2.2d, #0
+
+    mov         w5, #\h
+1:
+    subs        w5, w5, #2
+.rept 2
+.if FENC_STRIDE == 16
+    ldr         q16, [x0]
+    ldr         d17, [x1]
+    ldr         d19, [x1, #FDEC_STRIDE/2]
+.else
+    ldr         d16, [x0]
+    ldr         d17, [x1]
+    ldr         d18, [x0, #FENC_STRIDE/2]
+    ldr         d19, [x1, #FDEC_STRIDE/2]
+    mov         v16.d[1], v18.d[0]
+.endif
+    mov         v17.d[1], v19.d[0]
+    add         x0, x0, #FENC_STRIDE
+    add         x1, x1, #FDEC_STRIDE
+
+    usubl       v20.8h,  v16.8b,  v17.8b
+    usubl2      v21.8h,  v16.16b, v17.16b
+    uabd        v22.16b, v16.16b, v17.16b
+
+    add         v0.8h,  v0.8h,   v20.8h
+    add         v1.8h,  v1.8h,   v21.8h
+    udot        v2.4s,  v22.16b, v22.16b
+.endr
+    b.ne        1b
+
+    addp        v0.8h, v0.8h, v1.8h
+    saddlp      v0.4s, v0.8h
+    addp        v2.4s, v2.4s, v0.4s
+    str         d2, [x2]
+    smull2      v0.2d, v2.4s, v2.4s
+    shrn        v0.2s, v0.2d, #\shift
+    sub         v0.2s, v2.2s, v0.2s
+    addp        v0.2s, v0.2s, v0.2s
+    fmov        w0, s0
+    ret
+endfunc
+.endm
+DISABLE_DOTPROD
+#endif // HAVE_DOTPROD
+
 function pixel_satd_16x8_neon, export=1
     mov         x4,  x30
 
@@ -3036,5 +3140,13 @@ SSD_DOTPROD_FUNC   8, 8
 SSD_DOTPROD_FUNC   8, 16
 SSD_DOTPROD_FUNC  16, 8
 SSD_DOTPROD_FUNC  16, 16
+
+PIXEL_VAR_WxH_NEON_DOTPROD   8,   8
+PIXEL_VAR_WxH_NEON_DOTPROD   8,  16
+PIXEL_VAR_WxH_NEON_DOTPROD  16,  16
+
+PIXEL_VAR2_8xH_NEON_DOTPROD  8,   8,  6
+PIXEL_VAR2_8xH_NEON_DOTPROD  8,  16,  7
+
 DISABLE_DOTPROD
 #endif // BIT_DEPTH == 8 && HAVE_DOTPROD

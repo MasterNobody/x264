@@ -150,68 +150,6 @@ endfunc
     sub         v23.8h, v6.8h,  v7.8h
 .endm
 
-.macro pixel_var_sve_8 h
-function pixel_var_8x\h\()_sve, export=1
-    ptrue           p0.h, vl8
-    ld1b            {z16.h}, p0/z, [x0]
-    add             x0, x0, x1
-    ld1b            {z17.h}, p0/z, [x0]
-    add             x0, x0, x1
-    mov             x2,  \h - 4
-    mul             v1.8h,  v16.8h, v16.8h
-    mul             v2.8h,  v17.8h, v17.8h
-    add             v0.8h,  v16.8h,  v17.8h
-    ld1b            {z18.h}, p0/z, [x0]
-    add             x0, x0, x1
-    uaddlp          v1.4s,  v1.8h
-    uaddlp          v2.4s,  v2.8h
-    ld1b            {z19.h}, p0/z, [x0]
-    add             x0, x0, x1
-
-1:  subs            x2,  x2,  #4
-    add             v0.8h,  v0.8h,  v18.8h
-    mul             v24.8h, v18.8h, v18.8h
-    ld1b            {z20.h}, p0/z, [x0]
-    add             x0, x0, x1
-    add             v0.8h,  v0.8h,  v19.8h
-    mul             v25.8h, v19.8h, v19.8h
-    uadalp          v1.4s,  v24.8h
-    ld1b            {z21.h}, p0/z, [x0]
-    add             x0, x0, x1
-    add             v0.8h,  v0.8h,  v20.8h
-    mul             v26.8h, v20.8h, v20.8h
-    uadalp          v2.4s,  v25.8h
-    ld1b            {z18.h}, p0/z, [x0]
-    add             x0, x0, x1
-    add             v0.8h,  v0.8h,  v21.8h
-    mul             v27.8h, v21.8h, v21.8h
-    uadalp          v1.4s,  v26.8h
-    ld1b            {z19.h}, p0/z, [x0]
-    add             x0, x0, x1
-    uadalp          v2.4s,  v27.8h
-    b.gt            1b
-
-    add             v0.8h,  v0.8h,  v18.8h
-    mul             v28.8h, v18.8h, v18.8h
-    add             v0.8h,  v0.8h,  v19.8h
-    mul             v29.8h, v19.8h, v19.8h
-    uadalp          v1.4s,  v28.8h
-    uadalp          v2.4s,  v29.8h
-
-    b               var_end
-endfunc
-.endm
-
-function var_end
-    add             v1.4s,  v1.4s,  v2.4s
-    uaddlv          s0,  v0.8h
-    uaddlv          d1,  v1.4s
-    mov             w0,  v0.s[0]
-    mov             x1,  v1.d[0]
-    orr             x0,  x0,  x1,  lsl #32
-    ret
-endfunc
-
 .macro SUMSUBL_AB_SVE  sum, sub, a, b
     add         \sum,  \a,  \b
     sub         \sub,  \a,  \b
@@ -461,9 +399,6 @@ SSD_FUNC_SVE   4, 8
 SSD_FUNC_SVE   4, 16
 SSD_FUNC_SVE   8, 4
 SSD_FUNC_SVE   8, 8
-
-pixel_var_sve_8  8
-pixel_var_sve_8 16
 
 sa8d_satd_sve_8x8
 

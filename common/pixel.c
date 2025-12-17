@@ -1545,6 +1545,12 @@ void x264_pixel_init( uint32_t cpu, x264_pixel_function_t *pixf )
         pixf->ssd[PIXEL_8x16]  = x264_pixel_ssd_8x16_neon_dotprod;
         pixf->ssd[PIXEL_16x16] = x264_pixel_ssd_16x16_neon_dotprod;
         pixf->ssd[PIXEL_16x8]  = x264_pixel_ssd_16x8_neon_dotprod;
+
+        pixf->var[PIXEL_8x8]    = x264_pixel_var_8x8_neon_dotprod;
+        pixf->var[PIXEL_8x16]   = x264_pixel_var_8x16_neon_dotprod;
+        pixf->var[PIXEL_16x16]  = x264_pixel_var_16x16_neon_dotprod;
+        pixf->var2[PIXEL_8x8]   = x264_pixel_var2_8x8_neon_dotprod;
+        pixf->var2[PIXEL_8x16]  = x264_pixel_var2_8x16_neon_dotprod;
         pixf->vsad = x264_pixel_vsad_neon_dotprod;
     }
 #endif // HAVE_DOTPROD
@@ -1557,9 +1563,6 @@ void x264_pixel_init( uint32_t cpu, x264_pixel_function_t *pixf )
         INIT_ADS( _sve );
 
         pixf->sa8d[PIXEL_8x8]   = x264_pixel_sa8d_8x8_sve;
-
-        pixf->var[PIXEL_8x8]    = x264_pixel_var_8x8_sve;
-        pixf->var[PIXEL_8x16]   = x264_pixel_var_8x16_sve;
     }
 #endif
 #if HAVE_SVE2
