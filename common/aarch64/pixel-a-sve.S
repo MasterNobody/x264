@@ -155,6 +155,68 @@ endfunc
     sub         \sub,  \a,  \b
 .endm
 
+function pixel_ssim_end4_sve, export=1
+    ldp         q16, q17, [x0]
+    ldp         q18, q19, [x1]
+    ldp         q20, q21, [x0, #32]
+    ldp         q22, q23, [x1, #32]
+    add         v16.4s,  v16.4s,  v18.4s
+    add         v17.4s,  v17.4s,  v19.4s
+    add         v20.4s,  v20.4s,  v22.4s
+    add         v21.4s,  v21.4s,  v23.4s
+
+    mov         w5,  #4
+    mov         w4,  #0x99bb
+    sub         w2,  w5,  w2
+    mov         w3,  #416                       // ssim_c1 = .01*.01*255*255*64
+    movk        w4,  #0x03, lsl #16             // ssim_c2 = .03*.03*255*255*64*63
+    whilelt     p0.s, w2, w5
+
+    ldr         q24, [x0, #64]
+    ldr         q26, [x1, #64]
+    add         v24.4s,  v24.4s,  v26.4s
+
+    add         v0.4s,  v16.4s,  v17.4s
+    add         v1.4s,  v17.4s,  v20.4s
+    add         v2.4s,  v20.4s,  v21.4s
+    add         v3.4s,  v21.4s,  v24.4s
+
+    dup         v30.4s, w3
+    dup         v31.4s, w4
+
+    transpose   v4.4s,  v5.4s,  v0.4s,  v1.4s
+    transpose   v6.4s,  v7.4s,  v2.4s,  v3.4s
+    transpose   v0.2d,  v1.2d,  v4.2d,  v6.2d
+    transpose   v2.2d,  v3.2d,  v5.2d,  v7.2d
+
+    mul         v16.4s, v0.4s, v2.4s    // s1*s2
+    mul         v0.4s,  v0.4s, v0.4s    // s1*s1
+    shl         v1.4s,  v1.4s, #6
+    mla         v0.4s,  v2.4s, v2.4s    // s1*s1 + s2*s2
+    shl         v3.4s,  v3.4s, #7
+    add         v2.4s, v16.4s, v16.4s   // s1*s2*2
+
+    sub         v1.4s,  v1.4s,  v0.4s   // vars
+    sub         v3.4s,  v3.4s,  v2.4s   // covar*2
+
+    add         v0.4s,  v0.4s,  v30.4s
+    add         v1.4s,  v1.4s,  v31.4s
+    add         v2.4s,  v2.4s,  v30.4s
+    add         v3.4s,  v3.4s,  v31.4s
+
+    scvtf       v0.4s,  v0.4s
+    scvtf       v1.4s,  v1.4s
+    scvtf       v2.4s,  v2.4s
+    scvtf       v3.4s,  v3.4s
+
+    fmul        v0.4s,  v0.4s,  v1.4s
+    fmul        v2.4s,  v2.4s,  v3.4s
+
+    fdiv        v0.4s,  v2.4s,  v0.4s
+    faddv       s0,  p0,  z0.s
+    ret
+endfunc
+
 function pixel_sa8d_8x8_sve, export=1
     ptrue       p0.h, vl8
     mov         x4,  x30

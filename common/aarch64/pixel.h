@@ -191,6 +191,8 @@ void x264_pixel_ssim_4x4x2_core_neon( const pixel *, intptr_t,
                                       int sums[2][4] );
 #define x264_pixel_ssim_end4_neon x264_template(pixel_ssim_end4_neon)
 float x264_pixel_ssim_end4_neon( int sum0[5][4], int sum1[5][4], int width );
+#define x264_pixel_ssim_end4_sve x264_template(pixel_ssim_end4_sve)
+float x264_pixel_ssim_end4_sve( int sum0[5][4], int sum1[5][4], int width );
 
 #define x264_pixel_asd8_neon x264_template(pixel_asd8_neon)
 int x264_pixel_asd8_neon( pixel *, intptr_t,  pixel *, intptr_t, int );

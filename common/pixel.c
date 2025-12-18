@@ -1567,6 +1567,8 @@ void x264_pixel_init( uint32_t cpu, x264_pixel_function_t *pixf )
         INIT_ADS( _sve );
 
         pixf->sa8d[PIXEL_8x8]   = x264_pixel_sa8d_8x8_sve;
+
+        pixf->ssim_end4         = x264_pixel_ssim_end4_sve;
     }
 #endif
 #if HAVE_SVE2
