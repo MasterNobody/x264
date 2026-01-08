@@ -1,7 +1,7 @@
 /*****************************************************************************
  * mc-a-sve.S: aarch64 motion compensation
  *****************************************************************************
- * Copyright (C) 2009-2025 x264 project
+ * Copyright (C) 2009-2026 x264 project
  *
  * Authors: David Chen <david.chen@myais.com.cn>
  *

@@ -1,7 +1,7 @@
 /****************************************************************************
  * checkasm-arm.S: assembly check tool
  *****************************************************************************
- * Copyright (C) 2015-2025 x264 project
+ * Copyright (C) 2015-2026 x264 project
  *
  * Authors: Martin Storsjo <martin@martin.st>
  *
