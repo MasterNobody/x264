@@ -1050,6 +1050,15 @@ void x264_zigzag_init( uint32_t cpu, x264_zigzag_function_t *pf_progressive, x26
         pf_progressive->sub_4x4   = x264_zigzag_sub_4x4_frame_neon;
         pf_progressive->sub_4x4ac = x264_zigzag_sub_4x4ac_frame_neon;
         pf_progressive->sub_8x8   = x264_zigzag_sub_8x8_frame_neon;
+#if HAVE_SVE
+        if( cpu&X264_CPU_SVE )
+        {
+            pf_interlaced->sub_4x4    = x264_zigzag_sub_4x4_field_sve;
+            pf_interlaced->sub_4x4ac  = x264_zigzag_sub_4x4ac_field_sve;
+            pf_progressive->sub_4x4   = x264_zigzag_sub_4x4_frame_sve;
+            pf_progressive->sub_4x4ac = x264_zigzag_sub_4x4ac_frame_sve;
+        }
+#endif
 #endif // HAVE_AARCH64
     }
 #endif // HAVE_ARMV6 || HAVE_AARCH64
@@ -1114,6 +1123,7 @@ void x264_zigzag_init( uint32_t cpu, x264_zigzag_function_t *pf_progressive, x26
 #if HAVE_SVE
     if( cpu&X264_CPU_SVE )
     {
+        pf_interlaced->interleave_8x8_cavlc =
         pf_progressive->interleave_8x8_cavlc =  x264_zigzag_interleave_8x8_cavlc_sve;
     }
 #endif

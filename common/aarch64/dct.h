@@ -94,6 +94,15 @@ void x264_zigzag_interleave_8x8_cavlc_neon( dctcoef *dst, dctcoef *src, uint8_t 
 #define x264_add4x4_idct_sve2 x264_template(add4x4_idct_sve2)
 void x264_add4x4_idct_sve2( uint8_t *p_dst, int16_t dct[16] );
 
+#define x264_zigzag_sub_4x4_field_sve x264_template(zigzag_sub_4x4_field_sve)
+int x264_zigzag_sub_4x4_field_sve( dctcoef level[16], const pixel *p_src, pixel *p_dst );
+#define x264_zigzag_sub_4x4ac_field_sve x264_template(zigzag_sub_4x4ac_field_sve)
+int x264_zigzag_sub_4x4ac_field_sve( dctcoef level[16], const pixel *p_src, pixel *p_dst, dctcoef *dc );
+#define x264_zigzag_sub_4x4_frame_sve x264_template(zigzag_sub_4x4_frame_sve)
+int x264_zigzag_sub_4x4_frame_sve( dctcoef level[16], const pixel *p_src, pixel *p_dst );
+#define x264_zigzag_sub_4x4ac_frame_sve x264_template(zigzag_sub_4x4ac_frame_sve)
+int x264_zigzag_sub_4x4ac_frame_sve( dctcoef level[16], const pixel *p_src, pixel *p_dst, dctcoef *dc );
+
 #define x264_zigzag_interleave_8x8_cavlc_sve x264_template(zigzag_interleave_8x8_cavlc_sve)
 void x264_zigzag_interleave_8x8_cavlc_sve( dctcoef *dst, dctcoef *src, uint8_t *nnz );
 

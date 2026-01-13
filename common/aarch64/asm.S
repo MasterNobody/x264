@@ -130,15 +130,26 @@ FUNC    .func   \name
     .endif
 .endm
 
-.macro  const   name, align=2
+.macro  const  name, export=0, align=2
     .macro endconst
+.if \export
+ELF     .size   EXTERN_ASM\name, . - EXTERN_ASM\name
+.else
 ELF     .size   \name, . - \name
+.endif
         .purgem endconst
     .endm
-ELF     .section        .rodata
+ELF     .section    .rodata
 MACH    .const_data
-        .align          \align
+        .align      \align
+    .if \export
+        .global EXTERN_ASM\name
+ELF     .type   EXTERN_ASM\name, %object
+EXTERN_ASM\name:
+    .else
+ELF     .type       \name, %object
 \name:
+    .endif
 .endm
 
 .macro  movrel rd, val, offset=0

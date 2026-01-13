@@ -27,26 +27,26 @@
 #include "asm.S"
 #include "dct-a-common.S"
 
-const scan4x4_frame, align=4
+const scan4x4_frame, align=5, export=1
 .byte    0,1,   8,9,   2,3,   4,5
 .byte   10,11, 16,17, 24,25, 18,19
 .byte   12,13,  6,7,  14,15, 20,21
 .byte   26,27, 28,29, 22,23, 30,31
 endconst
 
-const scan4x4_field, align=4
+const scan4x4_field, align=4, export=1
 .byte    0,1,   2,3,   8,9,   4,5
 .byte    6,7,  10,11, 12,13, 14,15
 endconst
 
-const sub4x4_frame, align=4
+const sub4x4_frame, align=4, export=1
 .byte    0,  1,  4,  8
 .byte    5,  2,  3,  6
 .byte    9, 12, 13, 10
 .byte    7, 11, 14, 15
 endconst
 
-const sub4x4_field, align=4
+const sub4x4_field, align=4, export=1
 .byte    0,  4,  1,  8
 .byte   12,  5,  9, 13
 .byte    2,  6, 10, 14
@@ -666,7 +666,7 @@ function add16x16_idct_dc_neon, export=1
     ret
 endfunc
 
-.macro sub4x4x2_dct_dc, dst, t0, t1, t2, t3, t4, t5, t6, t7
+.macro sub4x4x2_dct_dc dst, t0, t1, t2, t3, t4, t5, t6, t7
     ldr         q\t0\(), [x1]
     ldr         q\t1\(), [x2]
     ldr         q\t2\(), [x1, #FENC_STRIDE]
@@ -734,36 +734,31 @@ function sub8x16_dct_dc_neon, export=1
 endfunc
 
 function zigzag_interleave_8x8_cavlc_neon, export=1
-    mov         x3,  #7
-    movi        v31.4s, #1
+    add         x3, x2, #8
     ld4         {v0.8h,v1.8h,v2.8h,v3.8h}, [x1],  #64
-    ld4         {v4.8h,v5.8h,v6.8h,v7.8h}, [x1],  #64
+    ld4         {v4.8h,v5.8h,v6.8h,v7.8h}, [x1]
     umax        v16.8h, v0.8h,  v4.8h
     umax        v17.8h, v1.8h,  v5.8h
     umax        v18.8h, v2.8h,  v6.8h
     umax        v19.8h, v3.8h,  v7.8h
-    st1         {v0.8h}, [x0],  #16
-    st1         {v4.8h}, [x0],  #16
+    stp         q0, q4, [x0]
+    stp         q1, q5, [x0, #32]
+    stp         q2, q6, [x0, #64]
+    stp         q3, q7, [x0, #96]
     umaxp       v16.8h, v16.8h, v17.8h
     umaxp       v18.8h, v18.8h, v19.8h
-    st1         {v1.8h}, [x0],  #16
-    st1         {v5.8h}, [x0],  #16
     umaxp       v16.8h, v16.8h, v18.8h
-    st1         {v2.8h}, [x0],  #16
-    st1         {v6.8h}, [x0],  #16
-    cmhs        v16.4s, v16.4s, v31.4s
-    st1         {v3.8h}, [x0],  #16
-    and         v16.16b, v16.16b, v31.16b
-    st1         {v7.8h}, [x0],  #16
-    st1         {v16.b}[0],    [x2],  #1
-    st1         {v16.b}[4],    [x2],  x3
-    st1         {v16.b}[8],    [x2],  #1
-    st1         {v16.b}[12],   [x2]
+    cmtst       v16.4s, v16.4s, v16.4s
+    neg         v16.4s, v16.4s
+    uzp1        v16.16b, v16.16b, v16.16b
+    uzp1        v16.8b, v16.8b, v16.8b
+    st1         {v16.h}[0], [x2]
+    st1         {v16.h}[1], [x3]
     ret
 endfunc
 
 function zigzag_scan_4x4_frame_neon, export=1
-    movrel      x2, scan4x4_frame
+    movrel      x2, X(scan4x4_frame)
     ld1         {v0.16b,v1.16b}, [x1]
     ld1         {v16.16b,v17.16b}, [x2]
     tbl         v2.16b, {v0.16b,v1.16b}, v16.16b
@@ -772,35 +767,36 @@ function zigzag_scan_4x4_frame_neon, export=1
     ret
 endfunc
 
-.macro zigzag_sub_4x4 f ac
+.macro zigzag_sub_4x4 f, ac
 function zigzag_sub_4x4\ac\()_\f\()_neon, export=1
+    mov         x6, x2
+    ldr         s0, [x1], #FENC_STRIDE
+    ldr         s1, [x2], #FDEC_STRIDE
+
     mov         x9,  #FENC_STRIDE
     mov         x4,  #FDEC_STRIDE
-    movrel      x5,  sub4x4_\f
-    mov         x6,  x2
-    ld1         {v0.s}[0], [x1], x9
+    movrel      x5,  X(sub4x4_\f)
+    ldr         q16, [x5]
+
     ld1         {v0.s}[1], [x1], x9
-    ld1         {v0.s}[2], [x1], x9
-    ld1         {v0.s}[3], [x1], x9
-    ld1         {v16.16b}, [x5]
-    ld1         {v1.s}[0], [x2], x4
     ld1         {v1.s}[1], [x2], x4
+    ld1         {v0.s}[2], [x1], x9
     ld1         {v1.s}[2], [x2], x4
+    ld1         {v0.s}[3], [x1], x9
     ld1         {v1.s}[3], [x2], x4
+
     tbl         v2.16b, {v0.16b}, v16.16b
     tbl         v3.16b, {v1.16b}, v16.16b
-    st1         {v0.s}[0], [x6], x4
+    str         s0, [x6], #FDEC_STRIDE
     usubl       v4.8h,  v2.8b,  v3.8b
 .ifc \ac, ac
-    dup         h7, v4.h[0]
-    ins         v4.h[0], wzr
-    fmov        w5,  s7
-    strh        w5,  [x3]
+    str         h4, [x3]
+    mov         v4.h[0], wzr
 .endif
     usubl2      v5.8h,  v2.16b, v3.16b
     st1         {v0.s}[1], [x6], x4
     umax        v6.8h,  v4.8h,  v5.8h
-    umaxv       h6,  v6.8h
+    umaxv       s6,  v6.4s
     st1         {v0.s}[2], [x6], x4
     fmov        w7,  s6
     st1         {v0.s}[3], [x6], x4
@@ -817,7 +813,7 @@ zigzag_sub_4x4 frame
 zigzag_sub_4x4 frame, ac
 
 function zigzag_scan_4x4_field_neon, export=1
-    movrel      x2, scan4x4_field
+    movrel      x2, X(scan4x4_field)
     ld1         {v0.8h,v1.8h},   [x1]
     ld1         {v16.16b},       [x2]
     tbl         v0.16b, {v0.16b}, v16.16b
@@ -913,36 +909,51 @@ endfunc
 
 .macro zigzag_sub8x8 f
 function zigzag_sub_8x8_\f\()_neon, export=1
+    add         x9, x1, #FENC_STRIDE
+    add         x7, x2, #FDEC_STRIDE
+    mov         x5,  #FENC_STRIDE*2
+    mov         x6,  #FDEC_STRIDE*2
+
+    ldr         d0, [x1]
+    ldr         d4, [x2]
+    ld1         {v0.d}[1], [x9], x5
+    ld1         {v4.d}[1], [x7], x6
+    ldr         d1, [x1, #FENC_STRIDE*2]
+    ldr         d5, [x2, #FDEC_STRIDE*2]
+    ld1         {v1.d}[1], [x9], x5
+    ld1         {v5.d}[1], [x7], x6
+    ldr         d2, [x1, #FENC_STRIDE*4]
+    ldr         d6, [x2, #FDEC_STRIDE*4]
+    ld1         {v2.d}[1], [x9], x5
+    ld1         {v6.d}[1], [x7], x6
+    ldr         d3, [x1, #FENC_STRIDE*6]
+    ldr         d7, [x2, #FDEC_STRIDE*6]
+    ld1         {v3.d}[1], [x9]
+    ld1         {v7.d}[1], [x7]
+
     movrel      x4,  sub8x8_\f
-    mov         x5,  #FENC_STRIDE
-    mov         x6,  #FDEC_STRIDE
-    mov         x7,  x2
-    ld1         {v0.d}[0], [x1], x5
-    ld1         {v0.d}[1], [x1], x5
-    ld1         {v1.d}[0], [x1], x5
-    ld1         {v1.d}[1], [x1], x5
-    ld1         {v2.d}[0], [x1], x5
-    ld1         {v2.d}[1], [x1], x5
-    ld1         {v3.d}[0], [x1], x5
-    ld1         {v3.d}[1], [x1]
-    ld1         {v4.d}[0], [x2], x6
-    ld1         {v4.d}[1], [x2], x6
-    ld1         {v5.d}[0], [x2], x6
-    ld1         {v5.d}[1], [x2], x6
-    ld1         {v6.d}[0], [x2], x6
-    ld1         {v6.d}[1], [x2], x6
-    ld1         {v7.d}[0], [x2], x6
-    ld1         {v7.d}[1], [x2]
-    ld1         {v16.16b,v17.16b}, [x4], #32
-    ld1         {v18.16b,v19.16b}, [x4], #32
+    ldp         q16, q17, [x4]
     tbl         v24.16b, {v0.16b,v1.16b,v2.16b,v3.16b}, v16.16b
     tbl         v25.16b, {v0.16b,v1.16b,v2.16b,v3.16b}, v17.16b
-    tbl         v26.16b, {v0.16b,v1.16b,v2.16b,v3.16b}, v18.16b
-    tbl         v27.16b, {v0.16b,v1.16b,v2.16b,v3.16b}, v19.16b
     tbl         v28.16b, {v4.16b,v5.16b,v6.16b,v7.16b}, v16.16b
     tbl         v29.16b, {v4.16b,v5.16b,v6.16b,v7.16b}, v17.16b
+
+    ldp         q18, q19, [x4, #32]
+    tbl         v26.16b, {v0.16b,v1.16b,v2.16b,v3.16b}, v18.16b
+    tbl         v27.16b, {v0.16b,v1.16b,v2.16b,v3.16b}, v19.16b
     tbl         v30.16b, {v4.16b,v5.16b,v6.16b,v7.16b}, v18.16b
     tbl         v31.16b, {v4.16b,v5.16b,v6.16b,v7.16b}, v19.16b
+
+    add         x7, x2, #FDEC_STRIDE
+    str         d0, [x2]
+    st1         {v0.d}[1], [x7], x6
+    str         d1, [x2, #FDEC_STRIDE*2]
+    st1         {v1.d}[1], [x7], x6
+    str         d2, [x2, #FDEC_STRIDE*4]
+    st1         {v2.d}[1], [x7], x6
+    str         d3, [x2, #FDEC_STRIDE*6]
+    st1         {v3.d}[1], [x7]
+
     usubl       v4.8h,  v24.8b,  v28.8b
     usubl2      v5.8h,  v24.16b, v28.16b
     usubl       v6.8h,  v25.8b,  v29.8b
@@ -951,26 +962,21 @@ function zigzag_sub_8x8_\f\()_neon, export=1
     usubl2      v17.8h, v26.16b, v30.16b
     usubl       v18.8h, v27.8b,  v31.8b
     usubl2      v19.8h, v27.16b, v31.16b
+
+    stp         q4,  q5,  [x0]
+    stp         q6,  q7,  [x0, #32]
+    stp         q16, q17, [x0, #64]
+    stp         q18, q19, [x0, #96]
+
     umax        v20.8h, v4.8h,   v5.8h
     umax        v21.8h, v6.8h,   v7.8h
     umax        v22.8h, v16.8h,  v17.8h
     umax        v23.8h, v18.8h,  v19.8h
     umax        v20.8h, v20.8h,  v21.8h
-    umax        v21.8h, v22.8h,  v23.8h
-    umax        v20.8h, v20.8h,  v21.8h
-    umaxv       h22,    v20.8h
-    st1         {v0.d}[0], [x7], x6
-    st1         {v0.d}[1], [x7], x6
-    st1         {v1.d}[0], [x7], x6
-    st1         {v1.d}[1], [x7], x6
-    st1         {v2.d}[0], [x7], x6
-    st1         {v2.d}[1], [x7], x6
-    st1         {v3.d}[0], [x7], x6
-    st1         {v3.d}[1], [x7]
-    st1         {v4.8h,v5.8h},   [x0], #32
-    st1         {v6.8h,v7.8h},   [x0], #32
-    st1         {v16.8h,v17.8h}, [x0], #32
-    st1         {v18.8h,v19.8h}, [x0]
+    umax        v22.8h, v22.8h,  v23.8h
+    umax        v20.8h, v20.8h,  v22.8h
+    umaxv       s22,    v20.4s
+
     fmov        w9,  s22
     cmp         w9, #0
     cset        w0, ne
